@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ETH仓位计算器</title>
+    <title>ETH仓位计算器 - 支持多空单</title>
     <style>
         * {
             box-sizing: border-box;
@@ -74,7 +74,7 @@
             color: #444;
         }
         
-        input {
+        input, select {
             width: 100%;
             padding: 14px;
             border: 2px solid #e1e5eb;
@@ -83,13 +83,13 @@
             transition: all 0.3s;
         }
         
-        input:focus {
+        input:focus, select:focus {
             outline: none;
             border-color: #2a4d8f;
             box-shadow: 0 0 0 3px rgba(42, 77, 143, 0.1);
         }
         
-        input.error {
+        input.error, select.error {
             border-color: #e74c3c;
             background-color: rgba(231, 76, 60, 0.05);
         }
@@ -99,6 +99,47 @@
             font-size: 14px;
             margin-top: 5px;
             display: none;
+        }
+        
+        .position-type-selector {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .position-type-btn {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e1e5eb;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .position-type-btn:hover {
+            background-color: #e9ecef;
+        }
+        
+        .position-type-btn.active {
+            border-color: #2a4d8f;
+            background-color: rgba(42, 77, 143, 0.1);
+            color: #2a4d8f;
+        }
+        
+        .position-type-btn.long.active {
+            background-color: rgba(76, 217, 100, 0.1);
+            border-color: #4cd964;
+            color: #2e7d32;
+        }
+        
+        .position-type-btn.short.active {
+            background-color: rgba(231, 76, 60, 0.1);
+            border-color: #e74c3c;
+            color: #c62828;
         }
         
         .calculation-formula {
@@ -131,6 +172,25 @@
             font-weight: bold;
             margin: 15px 0;
             color: #4cd964;
+        }
+        
+        .position-indicator {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .position-indicator.long {
+            background-color: rgba(76, 217, 100, 0.2);
+            color: #2e7d32;
+        }
+        
+        .position-indicator.short {
+            background-color: rgba(231, 76, 60, 0.2);
+            color: #c62828;
         }
         
         .result-details {
@@ -217,15 +277,30 @@
             .calculator-card, .result-card {
                 min-width: 100%;
             }
+            
+            .position-type-selector {
+                flex-direction: column;
+                gap: 10px;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>ETH仓位计算器</h1>
-    <p class="subtitle">根据您的风险偏好和仓位设置，计算可开立的ETH数量</p>
+    <h1>ETH仓位计算器 - 多空单支持</h1>
+    <p class="subtitle">根据您的多空方向和风险偏好，计算可开的ETH数量</p>
     
     <div class="container">
         <div class="calculator-card">
+            <div class="position-type-selector">
+                <div class="position-type-btn long active" id="long-btn">
+                    📈 多单（做多）
+                </div>
+                <div class="position-type-btn short" id="short-btn">
+                    📉 空单（做空）
+                </div>
+            </div>
+            <input type="hidden" id="position-type" value="long">
+            
             <div class="input-group">
                 <label for="total-position">总仓位 (USD)</label>
                 <input type="number" id="total-position" min="0" step="0.01" placeholder="请输入您的总仓位金额" value="10000">
@@ -241,7 +316,7 @@
             <div class="input-group">
                 <label for="stop-loss">止损价 (USD)</label>
                 <input type="number" id="stop-loss" min="0" step="0.01" placeholder="请输入ETH止损价" value="3400">
-                <div class="error-message" id="stop-loss-error">止损价必须小于开单价</div>
+                <div class="error-message" id="stop-loss-error">多单止损价必须小于开单价，空单止损价必须大于开单价</div>
             </div>
             
             <div class="input-group">
@@ -268,19 +343,24 @@
             
             <div class="calculation-formula">
                 <p><strong>计算公式：</strong></p>
-                <p class="formula">可开ETH数量 = (总仓位 × 止损占比%) ÷ (开单价 - 止损价)</p>
-                <p>计算说明：根据您的总仓位和设定的止损百分比，计算出在设定止损价下可承受的ETH数量。</p>
+                <p class="formula">可开ETH数量 = (总仓位 × 止损占比%) ÷ |开单价 - 止损价|</p>
+                <p id="formula-explanation">对于多单，止损价应低于开单价；对于空单，止损价应高于开单价。</p>
             </div>
         </div>
         
         <div class="result-card">
             <div class="result-display">
+                <div class="position-indicator long" id="position-indicator">📈 多单</div>
                 <div class="result-label">可开ETH数量</div>
                 <div class="result-value" id="eth-quantity">5.00</div>
                 <div class="result-label">基于您的风险参数</div>
             </div>
             
             <div class="result-details">
+                <div class="detail-item">
+                    <span>交易方向：</span>
+                    <span id="position-type-display">多单（做多）</span>
+                </div>
                 <div class="detail-item">
                     <span>总仓位价值：</span>
                     <span id="total-position-display">$10,000.00</span>
@@ -316,6 +396,9 @@
 
     <script>
         // 获取DOM元素
+        const positionTypeInput = document.getElementById('position-type');
+        const longButton = document.getElementById('long-btn');
+        const shortButton = document.getElementById('short-btn');
         const totalPositionInput = document.getElementById('total-position');
         const entryPriceInput = document.getElementById('entry-price');
         const stopLossInput = document.getElementById('stop-loss');
@@ -325,6 +408,9 @@
         const stopLossSlider = document.getElementById('stop-loss-slider');
         const ethQuantityDisplay = document.getElementById('eth-quantity');
         const resetButton = document.getElementById('reset-btn');
+        const positionIndicator = document.getElementById('position-indicator');
+        const positionTypeDisplay = document.getElementById('position-type-display');
+        const formulaExplanation = document.getElementById('formula-explanation');
         
         // 显示元素
         const totalPositionDisplay = document.getElementById('total-position-display');
@@ -353,9 +439,49 @@
             });
         }
         
+        // 切换多空单
+        function setPositionType(type) {
+            positionTypeInput.value = type;
+            
+            // 更新按钮样式
+            if (type === 'long') {
+                longButton.classList.add('active');
+                shortButton.classList.remove('active');
+                positionIndicator.textContent = '📈 多单';
+                positionIndicator.className = 'position-indicator long';
+                positionTypeDisplay.textContent = '多单（做多）';
+                formulaExplanation.textContent = '对于多单，止损价应低于开单价；对于空单，止损价应高于开单价。';
+                
+                // 如果当前止损价大于开单价，自动调整
+                const entryPrice = parseFloat(entryPriceInput.value);
+                const stopLoss = parseFloat(stopLossInput.value);
+                if (!isNaN(entryPrice) && !isNaN(stopLoss) && stopLoss >= entryPrice) {
+                    stopLossInput.value = (entryPrice * 0.97).toFixed(2); // 默认设置3%止损
+                }
+            } else {
+                shortButton.classList.add('active');
+                longButton.classList.remove('active');
+                positionIndicator.textContent = '📉 空单';
+                positionIndicator.className = 'position-indicator short';
+                positionTypeDisplay.textContent = '空单（做空）';
+                formulaExplanation.textContent = '对于空单，止损价应高于开单价；对于多单，止损价应低于开单价。';
+                
+                // 如果当前止损价小于开单价，自动调整
+                const entryPrice = parseFloat(entryPriceInput.value);
+                const stopLoss = parseFloat(stopLossInput.value);
+                if (!isNaN(entryPrice) && !isNaN(stopLoss) && stopLoss <= entryPrice) {
+                    stopLossInput.value = (entryPrice * 1.03).toFixed(2); // 默认设置3%止损
+                }
+            }
+            
+            // 重新计算
+            calculateEthQuantity();
+        }
+        
         // 验证输入
         function validateInputs() {
             let isValid = true;
+            const positionType = positionTypeInput.value;
             
             // 验证总仓位
             const totalPosition = parseFloat(totalPositionInput.value);
@@ -379,11 +505,22 @@
                 entryPriceError.style.display = 'none';
             }
             
-            // 验证止损价
+            // 验证止损价（根据多空单不同）
             const stopLoss = parseFloat(stopLossInput.value);
-            if (isNaN(stopLoss) || stopLoss <= 0 || stopLoss >= entryPrice) {
+            if (isNaN(stopLoss) || stopLoss <= 0) {
                 stopLossInput.classList.add('error');
                 stopLossError.style.display = 'block';
+                stopLossError.textContent = '止损价必须大于0';
+                isValid = false;
+            } else if (positionType === 'long' && stopLoss >= entryPrice) {
+                stopLossInput.classList.add('error');
+                stopLossError.style.display = 'block';
+                stopLossError.textContent = '多单止损价必须小于开单价';
+                isValid = false;
+            } else if (positionType === 'short' && stopLoss <= entryPrice) {
+                stopLossInput.classList.add('error');
+                stopLossError.style.display = 'block';
+                stopLossError.textContent = '空单止损价必须大于开单价';
                 isValid = false;
             } else {
                 stopLossInput.classList.remove('error');
@@ -422,14 +559,21 @@
                 return;
             }
             
+            const positionType = positionTypeInput.value;
             const totalPosition = parseFloat(totalPositionInput.value);
             const entryPrice = parseFloat(entryPriceInput.value);
             const stopLoss = parseFloat(stopLossInput.value);
             const stopLossPercent = parseInt(stopLossPercentInput.value);
             
-            // 计算公式: (总仓位 * 止损占比%) / (开单价 - 止损价)
+            // 计算公式: (总仓位 * 止损占比%) / |开单价 - 止损价|
             const riskAmount = totalPosition * (stopLossPercent / 100);
-            const priceDifference = entryPrice - stopLoss;
+            let priceDifference;
+            
+            if (positionType === 'long') {
+                priceDifference = entryPrice - stopLoss;
+            } else {
+                priceDifference = stopLoss - entryPrice;
+            }
             
             if (priceDifference <= 0) {
                 ethQuantityDisplay.textContent = '0.00';
@@ -437,6 +581,13 @@
             }
             
             const ethQuantity = riskAmount / priceDifference;
+            
+            // 根据多空单设置结果颜色
+            if (positionType === 'long') {
+                ethQuantityDisplay.style.color = '#4cd964'; // 绿色
+            } else {
+                ethQuantityDisplay.style.color = '#e74c3c'; // 红色
+            }
             
             // 更新结果显示
             ethQuantityDisplay.textContent = ethQuantity.toFixed(2);
@@ -491,6 +642,9 @@
         
         // 重置所有输入
         function resetInputs() {
+            // 重置为多单
+            setPositionType('long');
+            
             totalPositionInput.value = 10000;
             entryPriceInput.value = 3500;
             stopLossInput.value = 3400;
@@ -520,11 +674,18 @@
         
         // 添加事件监听器
         function setupEventListeners() {
+            // 多空单按钮事件
+            longButton.addEventListener('click', () => setPositionType('long'));
+            shortButton.addEventListener('click', () => setPositionType('short'));
+            
+            // 输入字段事件
             totalPositionInput.addEventListener('input', calculateEthQuantity);
             entryPriceInput.addEventListener('input', calculateEthQuantity);
             stopLossInput.addEventListener('input', calculateEthQuantity);
             leverageInput.addEventListener('input', calculateEthQuantity);
             stopLossPercentInput.addEventListener('input', calculateEthQuantity);
+            
+            // 重置按钮事件
             resetButton.addEventListener('click', resetInputs);
             
             // 页面加载时计算一次
