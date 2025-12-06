@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ETH仓位计算器</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        
+        .calculator-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+            padding: 30px;
+            flex: 1;
+            min-width: 350px;
+        }
+        
+        .result-card {
+            background: linear-gradient(135deg, #1a2a6c, #2a4d8f);
+            color: white;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(26, 42, 108, 0.15);
+            padding: 30px;
+            flex: 1;
+            min-width: 350px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        h1 {
+            color: #1a2a6c;
+            margin-bottom: 5px;
+            border-bottom: 2px solid #eaeaea;
+            padding-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 16px;
+        }
+        
+        .input-group {
+            margin-bottom: 22px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #444;
+        }
+        
+        input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e1e5eb;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #2a4d8f;
+            box-shadow: 0 0 0 3px rgba(42, 77, 143, 0.1);
+        }
+        
+        input.error {
+            border-color: #e74c3c;
+            background-color: rgba(231, 76, 60, 0.05);
+        }
+        
+        .error-message {
+            color: #e74c3c;
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        .calculation-formula {
+            background-color: #f8f9fa;
+            border-left: 4px solid #2a4d8f;
+            padding: 15px;
+            margin: 25px 0;
+            border-radius: 0 8px 8px 0;
+            font-size: 15px;
+        }
+        
+        .formula {
+            font-weight: bold;
+            color: #1a2a6c;
+        }
+        
+        .result-display {
+            text-align: center;
+            margin-top: 10px;
+        }
+        
+        .result-label {
+            font-size: 18px;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+        
+        .result-value {
+            font-size: 42px;
+            font-weight: bold;
+            margin: 15px 0;
+            color: #4cd964;
+        }
+        
+        .result-details {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 25px;
+        }
+        
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .detail-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .btn-reset {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .btn-reset:hover {
+            background-color: #c0392b;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #777;
+            font-size: 14px;
+        }
+        
+        .slider-container {
+            margin-top: 8px;
+        }
+        
+        .slider-value {
+            text-align: center;
+            font-weight: bold;
+            color: #2a4d8f;
+            margin-top: 5px;
+        }
+        
+        input[type="range"] {
+            height: 8px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #e1e5eb;
+            border-radius: 4px;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #2a4d8f;
+            cursor: pointer;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .calculator-card, .result-card {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>ETH仓位计算器</h1>
+    <p class="subtitle">根据您的风险偏好和仓位设置，计算可开立的ETH数量</p>
+    
+    <div class="container">
+        <div class="calculator-card">
+            <div class="input-group">
+                <label for="total-position">总仓位 (USD)</label>
+                <input type="number" id="total-position" min="0" step="0.01" placeholder="请输入您的总仓位金额" value="10000">
+                <div class="error-message" id="total-position-error">总仓位必须大于0</div>
+            </div>
+            
+            <div class="input-group">
+                <label for="entry-price">开单价 (USD)</label>
+                <input type="number" id="entry-price" min="0" step="0.01" placeholder="请输入ETH开单价" value="3500">
+                <div class="error-message" id="entry-price-error">开单价必须大于0</div>
+            </div>
+            
+            <div class="input-group">
+                <label for="stop-loss">止损价 (USD)</label>
+                <input type="number" id="stop-loss" min="0" step="0.01" placeholder="请输入ETH止损价" value="3400">
+                <div class="error-message" id="stop-loss-error">止损价必须小于开单价</div>
+            </div>
+            
+            <div class="input-group">
+                <label for="leverage">杠杆倍数 (1-150)</label>
+                <input type="number" id="leverage" min="1" max="150" step="1" placeholder="请输入杠杆倍数" value="50">
+                <div class="error-message" id="leverage-error">杠杆倍数必须是1-150之间的整数</div>
+                <div class="slider-container">
+                    <input type="range" id="leverage-slider" min="1" max="150" value="50">
+                    <div class="slider-value" id="leverage-value">50</div>
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label for="stop-loss-percent">止损占比总仓位百分比 (5-10%)</label>
+                <input type="number" id="stop-loss-percent" min="5" max="10" step="1" placeholder="请输入止损百分比" value="5">
+                <div class="error-message" id="stop-loss-percent-error">止损占比必须是5-10之间的整数</div>
+                <div class="slider-container">
+                    <input type="range" id="stop-loss-slider" min="5" max="10" value="5">
+                    <div class="slider-value" id="stop-loss-percent-value">5%</div>
+                </div>
+            </div>
+            
+            <button class="btn-reset" id="reset-btn">重置所有参数</button>
+            
+            <div class="calculation-formula">
+                <p><strong>计算公式：</strong></p>
+                <p class="formula">可开ETH数量 = (总仓位 × 止损占比%) ÷ (开单价 - 止损价)</p>
+                <p>计算说明：根据您的总仓位和设定的止损百分比，计算出在设定止损价下可承受的ETH数量。</p>
+            </div>
+        </div>
+        
+        <div class="result-card">
+            <div class="result-display">
+                <div class="result-label">可开ETH数量</div>
+                <div class="result-value" id="eth-quantity">5.00</div>
+                <div class="result-label">基于您的风险参数</div>
+            </div>
+            
+            <div class="result-details">
+                <div class="detail-item">
+                    <span>总仓位价值：</span>
+                    <span id="total-position-display">$10,000.00</span>
+                </div>
+                <div class="detail-item">
+                    <span>风险金额：</span>
+                    <span id="risk-amount-display">$500.00</span>
+                </div>
+                <div class="detail-item">
+                    <span>价格波动风险：</span>
+                    <span id="price-risk-display">$100.00</span>
+                </div>
+                <div class="detail-item">
+                    <span>杠杆使用：</span>
+                    <span id="leverage-display">50倍</span>
+                </div>
+                <div class="detail-item">
+                    <span>止损百分比：</span>
+                    <span id="stop-loss-percent-display">5%</span>
+                </div>
+                <div class="detail-item">
+                    <span>开仓价值：</span>
+                    <span id="position-value-display">$17,500.00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>注意：此计算器仅为参考工具，实际交易请根据市场情况和个人风险承受能力谨慎决策。</p>
+        <p>© 2023 ETH仓位计算器 | 风险提示：加密货币交易具有高风险，可能导致资金损失</p>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const totalPositionInput = document.getElementById('total-position');
+        const entryPriceInput = document.getElementById('entry-price');
+        const stopLossInput = document.getElementById('stop-loss');
+        const leverageInput = document.getElementById('leverage');
+        const stopLossPercentInput = document.getElementById('stop-loss-percent');
+        const leverageSlider = document.getElementById('leverage-slider');
+        const stopLossSlider = document.getElementById('stop-loss-slider');
+        const ethQuantityDisplay = document.getElementById('eth-quantity');
+        const resetButton = document.getElementById('reset-btn');
+        
+        // 显示元素
+        const totalPositionDisplay = document.getElementById('total-position-display');
+        const riskAmountDisplay = document.getElementById('risk-amount-display');
+        const priceRiskDisplay = document.getElementById('price-risk-display');
+        const leverageDisplay = document.getElementById('leverage-display');
+        const stopLossPercentDisplay = document.getElementById('stop-loss-percent-display');
+        const positionValueDisplay = document.getElementById('position-value-display');
+        
+        // 错误消息元素
+        const totalPositionError = document.getElementById('total-position-error');
+        const entryPriceError = document.getElementById('entry-price-error');
+        const stopLossError = document.getElementById('stop-loss-error');
+        const leverageError = document.getElementById('leverage-error');
+        const stopLossPercentError = document.getElementById('stop-loss-percent-error');
+        
+        // 滑块值显示
+        const leverageValueDisplay = document.getElementById('leverage-value');
+        const stopLossPercentValueDisplay = document.getElementById('stop-loss-percent-value');
+        
+        // 格式化货币显示
+        function formatCurrency(value) {
+            return '$' + parseFloat(value).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+        
+        // 验证输入
+        function validateInputs() {
+            let isValid = true;
+            
+            // 验证总仓位
+            const totalPosition = parseFloat(totalPositionInput.value);
+            if (isNaN(totalPosition) || totalPosition <= 0) {
+                totalPositionInput.classList.add('error');
+                totalPositionError.style.display = 'block';
+                isValid = false;
+            } else {
+                totalPositionInput.classList.remove('error');
+                totalPositionError.style.display = 'none';
+            }
+            
+            // 验证开单价
+            const entryPrice = parseFloat(entryPriceInput.value);
+            if (isNaN(entryPrice) || entryPrice <= 0) {
+                entryPriceInput.classList.add('error');
+                entryPriceError.style.display = 'block';
+                isValid = false;
+            } else {
+                entryPriceInput.classList.remove('error');
+                entryPriceError.style.display = 'none';
+            }
+            
+            // 验证止损价
+            const stopLoss = parseFloat(stopLossInput.value);
+            if (isNaN(stopLoss) || stopLoss <= 0 || stopLoss >= entryPrice) {
+                stopLossInput.classList.add('error');
+                stopLossError.style.display = 'block';
+                isValid = false;
+            } else {
+                stopLossInput.classList.remove('error');
+                stopLossError.style.display = 'none';
+            }
+            
+            // 验证杠杆倍数
+            const leverage = parseInt(leverageInput.value);
+            if (isNaN(leverage) || leverage < 1 || leverage > 150 || !Number.isInteger(leverage)) {
+                leverageInput.classList.add('error');
+                leverageError.style.display = 'block';
+                isValid = false;
+            } else {
+                leverageInput.classList.remove('error');
+                leverageError.style.display = 'none';
+            }
+            
+            // 验证止损百分比
+            const stopLossPercent = parseInt(stopLossPercentInput.value);
+            if (isNaN(stopLossPercent) || stopLossPercent < 5 || stopLossPercent > 10 || !Number.isInteger(stopLossPercent)) {
+                stopLossPercentInput.classList.add('error');
+                stopLossPercentError.style.display = 'block';
+                isValid = false;
+            } else {
+                stopLossPercentInput.classList.remove('error');
+                stopLossPercentError.style.display = 'none';
+            }
+            
+            return isValid;
+        }
+        
+        // 计算ETH数量
+        function calculateEthQuantity() {
+            if (!validateInputs()) {
+                ethQuantityDisplay.textContent = '0.00';
+                return;
+            }
+            
+            const totalPosition = parseFloat(totalPositionInput.value);
+            const entryPrice = parseFloat(entryPriceInput.value);
+            const stopLoss = parseFloat(stopLossInput.value);
+            const stopLossPercent = parseInt(stopLossPercentInput.value);
+            
+            // 计算公式: (总仓位 * 止损占比%) / (开单价 - 止损价)
+            const riskAmount = totalPosition * (stopLossPercent / 100);
+            const priceDifference = entryPrice - stopLoss;
+            
+            if (priceDifference <= 0) {
+                ethQuantityDisplay.textContent = '0.00';
+                return;
+            }
+            
+            const ethQuantity = riskAmount / priceDifference;
+            
+            // 更新结果显示
+            ethQuantityDisplay.textContent = ethQuantity.toFixed(2);
+            totalPositionDisplay.textContent = formatCurrency(totalPosition);
+            riskAmountDisplay.textContent = formatCurrency(riskAmount);
+            priceRiskDisplay.textContent = formatCurrency(priceDifference);
+            leverageDisplay.textContent = `${leverageInput.value}倍`;
+            stopLossPercentDisplay.textContent = `${stopLossPercent}%`;
+            
+            // 计算开仓价值 (总仓位 * 杠杆倍数)
+            const leverage = parseInt(leverageInput.value);
+            const positionValue = totalPosition * leverage;
+            positionValueDisplay.textContent = formatCurrency(positionValue);
+        }
+        
+        // 更新滑块显示
+        function updateSliderDisplays() {
+            leverageValueDisplay.textContent = leverageSlider.value;
+            stopLossPercentValueDisplay.textContent = `${stopLossSlider.value}%`;
+        }
+        
+        // 初始化滑块和输入同步
+        function initializeSliders() {
+            // 杠杆滑块和输入同步
+            leverageSlider.value = leverageInput.value;
+            leverageSlider.addEventListener('input', function() {
+                leverageInput.value = this.value;
+                leverageValueDisplay.textContent = this.value;
+                calculateEthQuantity();
+            });
+            
+            leverageInput.addEventListener('input', function() {
+                leverageSlider.value = this.value;
+                leverageValueDisplay.textContent = this.value;
+                calculateEthQuantity();
+            });
+            
+            // 止损百分比滑块和输入同步
+            stopLossSlider.value = stopLossPercentInput.value;
+            stopLossSlider.addEventListener('input', function() {
+                stopLossPercentInput.value = this.value;
+                stopLossPercentValueDisplay.textContent = `${this.value}%`;
+                calculateEthQuantity();
+            });
+            
+            stopLossPercentInput.addEventListener('input', function() {
+                stopLossSlider.value = this.value;
+                stopLossPercentValueDisplay.textContent = `${this.value}%`;
+                calculateEthQuantity();
+            });
+        }
+        
+        // 重置所有输入
+        function resetInputs() {
+            totalPositionInput.value = 10000;
+            entryPriceInput.value = 3500;
+            stopLossInput.value = 3400;
+            leverageInput.value = 50;
+            stopLossPercentInput.value = 5;
+            
+            // 更新滑块
+            leverageSlider.value = 50;
+            stopLossSlider.value = 5;
+            
+            // 清除错误状态
+            totalPositionInput.classList.remove('error');
+            entryPriceInput.classList.remove('error');
+            stopLossInput.classList.remove('error');
+            leverageInput.classList.remove('error');
+            stopLossPercentInput.classList.remove('error');
+            
+            totalPositionError.style.display = 'none';
+            entryPriceError.style.display = 'none';
+            stopLossError.style.display = 'none';
+            leverageError.style.display = 'none';
+            stopLossPercentError.style.display = 'none';
+            
+            updateSliderDisplays();
+            calculateEthQuantity();
+        }
+        
+        // 添加事件监听器
+        function setupEventListeners() {
+            totalPositionInput.addEventListener('input', calculateEthQuantity);
+            entryPriceInput.addEventListener('input', calculateEthQuantity);
+            stopLossInput.addEventListener('input', calculateEthQuantity);
+            leverageInput.addEventListener('input', calculateEthQuantity);
+            stopLossPercentInput.addEventListener('input', calculateEthQuantity);
+            resetButton.addEventListener('click', resetInputs);
+            
+            // 页面加载时计算一次
+            calculateEthQuantity();
+        }
+        
+        // 初始化页面
+        function init() {
+            initializeSliders();
+            setupEventListeners();
+            updateSliderDisplays();
+        }
+        
+        // 当页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
